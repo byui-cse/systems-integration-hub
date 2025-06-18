@@ -50,6 +50,15 @@
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         }
 
+        /* Header Specifics for Mars Sol Time */
+        #mars-sol-time {
+            color: #00ffcc; /* Cyan/greenish color for time */
+            font-size: 1.1em;
+            margin-bottom: 15px; /* Space between time and nav */
+            text-shadow: 0 0 5px rgba(0, 255, 204, 0.4);
+            font-weight: bold;
+        }
+
         nav {
             display: flex;
             flex-wrap: wrap; /* Allow links to wrap if necessary */
@@ -320,6 +329,7 @@
     <div id="app">
         <header>
             <h1>Mars Systems Integration Hub</h1>
+            <p id="mars-sol-time">Loading Mars Sol Time...</p> <!-- New element for sol date -->
             <nav>
                 <a href="#" data-page="home" class="active">Dashboard</a>
                 <a href="#" data-page="logs">System Logs</a>
@@ -463,6 +473,7 @@
             const logDownloadStatus = document.getElementById('log-download-status');
             const schematicDownloadButtons = document.querySelectorAll('#schematics-page button');
             const codeDownloadButtons = document.querySelectorAll('#code-page button');
+            const marsSolTimeElement = document.getElementById('mars-sol-time');
 
             // Function to show a specific page
             function showPage(pageId) {
@@ -539,8 +550,60 @@
                 });
             });
 
+            // Function to calculate and display Mars Sol Date and Mars Coordinated Time (MTC)
+            function updateMarsTime() {
+                if (!marsSolTimeElement) return; // Exit if element not found
+
+                const msPerEarthDay = 24 * 60 * 60 * 1000; // Milliseconds in an Earth day
+                const msPerMarsSol = 88775.244 * 1000;   // Milliseconds in a Mars sol (24h 39m 35.244s)
+
+                // Get current UTC Earth time
+                const now = new Date();
+                const utcMillis = now.getTime();
+
+                // Julian Date (JD) for current UTC
+                // JD = (milliseconds_since_unix_epoch / ms_per_day) + JD_of_unix_epoch
+                // JD of Unix epoch (1970-01-01 00:00:00 UTC) is 2440587.5
+                const JD_UNIX_EPOCH = 2440587.5;
+                const currentJD = (utcMillis / msPerEarthDay) + JD_UNIX_EPOCH;
+
+                // Mars Sol Date (MSD) calculation based on J2000 epoch (Jan 1, 2000, 12:00 TT)
+                // Reference: NASA GISS Mars24 Technical Notes
+                // MSD = (JD_TT - JD_J2000_TT) / MARS_DAY_RATIO + MSD_J2000 - offset
+                // For simplicity on a dashboard, we'll use UTC-based JD and approximate TT differences.
+                const MARS_DAY_RATIO = 1.0274912517; // Ratio of Mars sol to Earth day
+                const JD_J2000 = 2451549.5;          // Julian Date of Jan 1, 2000, 12:00 TT
+                const MSD_J2000 = 44796.0;           // Mars Sol Date at J2000 epoch
+                const MSD_OFFSET = 0.0009626;        // Small offset as per definition
+
+                const currentMSD = (currentJD - JD_J2000) / MARS_DAY_RATIO + MSD_J2000 - MSD_OFFSET;
+
+                const solNumber = Math.floor(currentMSD);
+                const fractionalSol = currentMSD - solNumber;
+
+                // Convert fractional sol to Mars Coordinated Time (MTC) HH:MM:SS Mars
+                // MTC uses a 24-hour clock where hours, minutes, and seconds are stretched.
+                const totalMarsSeconds = fractionalSol * msPerMarsSol / 1000; // Total seconds into the Mars sol
+                const marsHours = Math.floor(totalMarsSeconds / (60 * 60));
+                const marsMinutes = Math.floor((totalMarsSeconds % (60 * 60)) / 60);
+                const marsSeconds = Math.floor(totalMarsSeconds % 60);
+
+                // Format time for display (pad with leading zeros)
+                const formattedMarsTime = [
+                    marsHours,
+                    marsMinutes,
+                    marsSeconds
+                ].map(unit => unit.toString().padStart(2, '0')).join(':');
+
+                marsSolTimeElement.textContent = `Sol: ${solNumber} | Mars Coordinated Time: ${formattedMarsTime} MTC`;
+            }
+
             // Set initial active page (Dashboard)
             showPage('home-page');
+
+            // Call initially and then update every second
+            updateMarsTime();
+            setInterval(updateMarsTime, 1000);
         });
     </script>
 </body>
