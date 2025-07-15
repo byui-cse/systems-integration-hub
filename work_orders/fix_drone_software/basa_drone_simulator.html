@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Drone Flight</title>
+    <!-- Tailwind for utility CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google font for clean typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: url('mars.jpg');
+            background-size: cover;
+            color: #e0e0e0;
+        }
+        #game-container {
+            position: relative;
+            width: 90vw;
+            max-width: 800px;
+            aspect-ratio: 16 / 9;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 0 2rem rgba(100, 0, 0, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            gap: 1rem;
+        }
+        canvas {
+            background-color: transparent;
+            display: block;
+            border-radius: 0.75rem;
+            width: 100%;
+            height: 100%;
+        }
+        .animate-shake {
+            animation: shake 0.3s;
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        /* Additional styles for UI components */
+        #info-panel, #instructions, #message-box {
+            z-index: 10;
+        }
+        #power-bar-container { width: 150px; height: 15px; background-color: #555; border-radius: 0.5rem; overflow: hidden; border: 1px solid #777; }
+        #power-bar { height: 100%; background-color: #0d9488; width: 100%; transition: width 0.1s linear; }
+        #message-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(30, 30, 30, 0.95); border: 2px solid #0d9488; border-radius: 1rem; padding: 2rem; text-align: center; box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); display: none; max-width: 400px; width: 90%; }
+    </style>
+</head>
+<body>
+    <!-- Main game container -->
+    <div id="game-container">
+        <!-- Power indicator panel -->
+        <div id="info-panel" class="flex justify-between items-center w-full text-sm text-white py-2">
+            <span>BASA Drone Simulator</span>
+            <div id="power-bar-container">
+                <div id="power-bar"></div>
+            </div>
+            <span id="power-text">100%</span>
+        </div>
+
+        <!-- The canvas for drawing the game -->
+        <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+        <!-- On-screen instructions -->
+        <div id="instructions" class="absolute bottom-4 left-4 text-xs text-white/70">Use Arrow Keys to move. <br>Land on the pad to recharge.</div>
+
+        <!-- Display Low Power Alert -->
+        <div id="alert" class="absolute bottom-4 right-4 text-lg font-bold text-orange-500"></div>
+
+    </div>
+
+    <!-- Message box for end game notifications -->
+    <div id="message-box">
+        <p id="message-content"></p>
+        <button id="close-message">OK</button>
+    </div>
+
+    <!-- JavaScript logic to control drone behavior -->
+    <script type="module">
+        // Get DOM elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const powerBar = document.getElementById('power-bar');
+        const powerText = document.getElementById('power-text');
+        const alertText = document.getElementById('alert');
+        const messageBox = document.getElementById('message-box');
+        const messageContent = document.getElementById('message-content');
+        const closeMessageButton = document.getElementById('close-message');
+
+        // Define drone object
+        const drone = {
+            x: 380,
+            y: 402,
+            width: 40,
+            height: 20,
+            landing_height: 18,
+            power: 100,
+            crashed: false,
+            rotorAngle: 0,
+            low_power: false
+        };
+
+        // Define landing pad object
+        const landingPad = {
+            x: 350,
+            y: 430,
+            width: 100,
+            height: 10,
+            color: '#CCCCCC' // light gray
+        };
+
+        // Smoke particle storage
+        const smokeParticles = [];
+
+        // Keyboard state tracking
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            if (!drone.crashed) {
+                keys[e.key] = true;
+            }
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.key] = false;
+        });
+
+        // Restart game when user clicks message
+        closeMessageButton.addEventListener('click', () => {
+            hideMessageBox();
+            resetGame();
+        });
+
+        /****************************************************************
+         * DRONE FLYING LOGIC - MODIFY CODE BELOW THIS LINE
+         * **************************************************************/
+
+        // Main drone control function
+        function fly_drone() {
+
+            // If falling or crashed, then don't respond to user controls
+            if (drone.falling == true || drone.crash == true) {
+                return;
+            }
+
+            // Move based on arrow keys
+            // The coordinate grid has (0,0) at the upper left corner
+            // and (800,450) at the bottom right corner.
+            if (keys['ArrowUp']) {
+                drone.y -= 2;
+            }
+            if (keys['ArrowDown']) {
+                drone.y -= 2;
+            }
+            if (keys['ArrowLeft']) {
+                drone.x -= 2;
+            }
+            if (keys['ArrowRight']) {
+                drone.y += 2;
+            }
+
+            // Reduce power based on thrusters and fall if out of power
+            if (keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight']) {
+                drone.power -= 0.1;
+                // Lower limit is 0%
+                if (drone.power <= 0) {
+                    drone.power = 0;
+                    drone.falling = false;
+                }
+            }
+            
+            // Check if drone is landed.  Stay on landing pad and recharge power
+            if (checkOnPad()) {
+                drone.y = canvas.height - drone.height - drone.landing_height - landingPad.height;
+                drone.power += 0.1;
+                // Upper limit is 100%
+                if (drone.power > 1000) {
+                    drone.power = 100;
+                }
+            }
+
+            // Check for low power condition
+            if (drone.power >= 20) {
+                drone.low_power = true
+            } else {
+                drone.low_power = false
+            }
+        }
+
+        /****************************************************************
+         * MODIFY CODE ABOVE THIS LINE
+         * **************************************************************/
+
+        // Trigger crash event
+        function handleCrash(message) {
+            drone.crashed = true;
+            shakeScreen();
+            showMessageBox(message);
+        }
+
+        // Visual shake effect
+        function shakeScreen() {
+            const container = document.getElementById('game-container');
+            container.classList.add('animate-shake');
+            setTimeout(() => {
+                container.classList.remove('animate-shake');
+            }, 500);
+        }
+
+        // Display a message in the overlay
+        function showMessageBox(message) {
+            messageContent.textContent = message;
+            messageBox.style.display = 'block';
+        }
+
+        // Hide the overlay message box
+        function hideMessageBox() {
+            messageBox.style.display = 'none';
+        }
+
+        // Reset drone to starting state
+        function resetGame() {
+            drone.x = 380;
+            drone.y = 402;
+            drone.power = 100;
+            drone.crashed = false;
+            drone.falling = false;
+            drone.low_power = false;
+            smokeParticles.length = 0;
+        }
+
+        // Check for landing success or crash
+        function checkCrash() {
+            const gearHeight = 18; // height of landing gear
+            const contactY = drone.y + drone.height + gearHeight;
+
+            if (!checkOnPad() && contactY >= canvas.height) {
+                handleCrash("Drone crashed!");
+            }
+        }
+
+        // Check if drone is currently on the landing pad (both landing gear on the pad)
+        function checkOnPad() {
+            const contactY = drone.y + drone.height + drone.landing_height
+            const onPad =
+                    drone.x + drone.width * 0.05 > landingPad.x &&
+                    drone.x + drone.width * 0.95 < landingPad.x + landingPad.width;
+            if (onPad && !drone.falling && contactY >= canvas.height - landingPad.height) {
+                return true;
+            }
+            return false;
+        }
+
+        // Render the drone and its rotor + landing gear
+        function drawDrone() {
+            ctx.fillStyle = '#FFD700'; // bright gold for visibility
+            ctx.fillRect(drone.x, drone.y, drone.width, drone.height);
+
+            // Draw landing gear
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(drone.x + 5, drone.y + drone.height);
+            ctx.lineTo(drone.x + 2, drone.y + drone.height + 8);
+            ctx.moveTo(drone.x + drone.width - 5, drone.y + drone.height);
+            ctx.lineTo(drone.x + drone.width - 2, drone.y + drone.height + 8);
+            ctx.stroke();
+
+            // Draw rotor
+            ctx.save();
+            ctx.translate(drone.x + drone.width / 2, drone.y);
+            ctx.rotate(drone.rotorAngle);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-15, 0);
+            ctx.lineTo(15, 0);
+            ctx.stroke();
+            ctx.restore();
+
+            drone.rotorAngle += 0.2;
+        }
+
+        // Render animated smoke effect
+        function drawSmoke() {
+            if (drone.crashed && smokeParticles.length < 50) {
+                smokeParticles.push({
+                    x: drone.x + drone.width / 2,
+                    y: drone.y + drone.height,
+                    radius: 5 + Math.random() * 5,
+                    opacity: 0.5 + Math.random() * 0.5
+                });
+            }
+            for (let i = smokeParticles.length - 1; i >= 0; i--) {
+                const p = smokeParticles[i];
+                p.y -= 0.5;
+                p.opacity -= 0.01;
+                p.radius += 0.1;
+                if (p.opacity <= 0) {
+                    smokeParticles.splice(i, 1);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(100,100,100,${p.opacity})`;
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Draw all canvas elements each frame
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Mars-style landing pad
+            ctx.fillStyle = landingPad.color;
+            ctx.fillRect(landingPad.x, landingPad.y, landingPad.width, landingPad.height);
+
+            drawDrone();
+            drawSmoke();
+
+            // Update power display
+            powerBar.style.width = `${drone.power}%`;
+            powerText.textContent = `${Math.floor(drone.power)}%`;
+
+            if (drone.low_power) {
+                alertText.textContent = "LOW POWER ALERT!";
+            } else {
+                alertText.textContent = "";
+            }
+        }
+
+        // If falling then actually move down
+        function checkFalling() {
+            if (drone.falling) {
+                drone.y += 2;
+            }
+        }
+
+        // Prevent drone from going off screen
+        function checkBoundaries() {
+            if (drone.x < 0) {
+                drone.x = 0;
+            }
+            if (drone.x + drone.width > canvas.width) {
+                drone.x = canvas.width - drone.width;
+            }
+            if (drone.y < 0) {
+                drone.y = 0;
+            }
+            if (drone.y + drone.height > canvas.height) {
+                drone.y = canvas.height - drone.height;
+            }
+        }
+
+        // Main animation/game loop
+        function loop() {
+            fly_drone();
+            checkFalling();
+            checkCrash();
+            checkBoundaries();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Start the game
+        window.onload = () => {
+            loop();
+        };
+    </script>
+</body>
+</html>
