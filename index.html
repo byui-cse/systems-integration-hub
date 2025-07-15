@@ -439,10 +439,10 @@
                 <p>Access and download source code for on-base devices and modules.</p>
                 <div class="code-list">
                     <div class="code-item">
-                        <h3>Rover Navigation AI (RNav-03)</h3>
-                        <p>Language: Python</p>
+                        <h3>BASA Drone Simulator (BDS-04C)</h3>
+                        <p>Language: HTML/JavaScript</p>
                         <p>Version: 4.7</p>
-                        <button data-file="RNav-03_v4.7.zip">Download Zip</button>
+                        <button data-file="basa_drone_simulator.html">Download basa_drone_simulator.html</button>
                     </div>
                     <div class="code-item">
                         <h3>Life Support Automation (LSA-01)</h3>
@@ -544,9 +544,12 @@
             codeDownloadButtons.forEach(button => {
                 button.addEventListener('click', (e) => {
                     const fileName = e.target.dataset.file;
-                    // Replace alert with a custom message box for production environments if needed
-                    alert(`Simulating download of ${fileName}. In a real app, this would trigger a file download.`);
-                    console.log(`Simulated download: ${fileName}`);
+                    const a = document.createElement('a');
+                    a.href = 'work_orders/' + fileName;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 });
             });
 
@@ -605,6 +608,9 @@
             updateMarsTime();
             setInterval(updateMarsTime, 1000);
         });
+
+
+
     </script>
 </body>
 </html>
