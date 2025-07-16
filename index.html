@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mars Systems Integration Hub</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/jsoneditor@latest/dist/jsoneditor.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jsoneditor@latest/dist/jsoneditor.min.js"></script>
     <style>
         /* General Body & Typography */
         body {
@@ -242,16 +244,14 @@
         }
 
 
-        /* Download Lists (Schematics, Code) */
-        .schematic-list,
-        .code-list {
+        /* Library */
+        .library-list {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
 
-        .schematic-item,
-        .code-item {
+        .library-item {
             background-color: rgba(25, 25, 45, 0.7);
             border: 1px solid rgba(170, 221, 255, 0.2);
             border-radius: 10px;
@@ -259,8 +259,7 @@
             box-shadow: 0 0 15px rgba(170, 221, 255, 0.1);
         }
 
-        .schematic-item h3,
-        .code-item h3 {
+        .library-item h3 {
             color: #ffaa00; /* Orange for item titles */
             margin-top: 0;
             font-size: 1.2em;
@@ -269,14 +268,12 @@
             margin-bottom: 15px;
         }
 
-        .schematic-item p,
-        .code-item p {
+        .library-item p {
             margin: 5px 0;
             font-size: 0.9em;
         }
 
-        .schematic-item button,
-        .code-item button {
+        .library-item button {
             margin-top: 15px;
             margin-right: 10px;
             padding: 8px 15px;
@@ -317,8 +314,8 @@
             }
 
             .dashboard-grid,
-            .schematic-list,
-            .code-list {
+            .sensor-list,
+            .library-list {
                 grid-template-columns: 1fr; /* Stack on small screens */
             }
         }
@@ -333,8 +330,8 @@
             <nav>
                 <a href="#" data-page="home" class="active">Dashboard</a>
                 <a href="#" data-page="logs">System Logs</a>
-                <a href="#" data-page="schematics">Schematics</a>
-                <a href="#" data-page="code">Device Code</a>
+                <a href="#" data-page="sensors">Sensors</a>
+                <a href="#" data-page="library">Library</a>
             </nav>
         </header>
 
@@ -407,61 +404,70 @@
                 <div id="log-download-status" class="status-message"></div>
             </section>
 
-            <!-- Circuit Board Schematics Page -->
-            <section id="schematics-page" class="page">
-                <h2>Circuit Board Schematics</h2>
-                <p>Browse and download schematics for various base components.</p>
-                <div class="schematic-list">
-                    <div class="schematic-item">
+            <!-- Sensors Page -->
+            
+
+            <section id="sensors-page" class="page">
+                <h2>Sensor Alarm Report</h2>
+                <p>Under Construction</p>
+                
+                <h2>Raw Sensor Data</h2>
+                <div id="jsoneditor" style="height: 500px;"></div>
+                <script>
+                    fetch('work_orders/basa_mars_sensors.json')
+                        .then(response => response.json())
+                        .then(data => {
+                        const container = document.getElementById('jsoneditor');
+                        const editor = new JSONEditor(container, {
+                            mode: 'view',  // try 'tree' if you want full expand/collapse
+                            mainMenuBar: false,
+                            expandAll: false
+                        });
+                        editor.set(data);
+                    });
+                </script>
+            </section>
+
+            <!-- Code for Devices Page -->
+            <section id="library-page" class="page">
+                <h2>Software Repository</h2>
+                <p>Access and download source code for BASA software.</p>
+                <div class="library-list">
+                    <div class="library-item">
+                        <h3>BASA Drone Simulator (BDS-04C)</h3>
+                        <p>Language: HTML/JavaScript</p>
+                        <p>Version: 4.7</p>
+                        <button data-file="basa_drone_simulator.html">Download</button>
+                    </div>
+                </div>
+                <h2>Schematic Repository</h2>
+                <p>Access and download schematics for BASA electronics.</p>
+                <div class="library-list">
+                    <div class="library-item">
                         <h3>Main Power Distribution Unit (PDU-01)</h3>
                         <p>Version: 3.1</p>
                         <button data-file="PDU-01_v3.1.pdf">Download PDF</button>
                         <button data-file="PDU-01_v3.1.dxf">Download DXF</button>
                     </div>
-                    <div class="schematic-item">
+                    <div class="library-item">
                         <h3>Environmental Control System (ECS-A)</h3>
                         <p>Version: 2.5</p>
                         <button data-file="ECS-A_v2.5.pdf">Download PDF</button>
                         <button data-file="ECS-A_v2.5.dxf">Download DXF</button>
                     </div>
-                    <div class="schematic-item">
+                    <div class="library-item">
                         <h3>Comms Array Transceiver (CAT-B)</h3>
                         <p>Version: 1.2</p>
                         <button data-file="CAT-B_v1.2.pdf">Download PDF</button>
                         <button data-file="CAT-B_v1.2.dxf">Download DXF</button>
                     </div>
                 </div>
-            </section>
-
-            <!-- Code for Devices Page -->
-            <section id="code-page" class="page">
-                <h2>Device Code Repository</h2>
-                <p>Access and download source code for on-base devices and modules.</p>
-                <div class="code-list">
-                    <div class="code-item">
-                        <h3>BASA Drone Simulator (BDS-04C)</h3>
-                        <p>Language: HTML/JavaScript</p>
-                        <p>Version: 4.7</p>
-                        <button data-file="basa_drone_simulator.html">Download basa_drone_simulator.html</button>
-                    </div>
-                    <div class="code-item">
-                        <h3>Life Support Automation (LSA-01)</h3>
-                        <p>Language: C++</p>
-                        <p>Version: 1.9</p>
-                        <button data-file="LSA-01_v1.9.zip">Download Zip</button>
-                    </div>
-                    <div class="code-item">
-                        <h3>Internal Drone Control (IDC-02)</h3>
-                        <p>Language: JavaScript</p>
-                        <p>Version: 2.1</p>
-                        <button data-file="IDC-02_v2.1.zip">Download Zip</button>
-                    </div>
-                </div>
+                
             </section>
         </main>
 
         <footer>
-            <p>&copy; 2025 Mars Base Operations. All Systems Monitored.</p>
+            <p>&copy; 2025 BASA Mars Base Operations. All Systems Monitored.</p>
         </footer>
     </div>
 
@@ -471,8 +477,7 @@
             const pages = document.querySelectorAll('.page');
             const downloadLogsButton = document.getElementById('download-logs');
             const logDownloadStatus = document.getElementById('log-download-status');
-            const schematicDownloadButtons = document.querySelectorAll('#schematics-page button');
-            const codeDownloadButtons = document.querySelectorAll('#code-page button');
+            const libraryDownloadButtons = document.querySelectorAll('.library-item button');
             const marsSolTimeElement = document.getElementById('mars-sol-time');
 
             // Function to show a specific page
@@ -523,25 +528,8 @@
                 });
             }
 
-            // Simulate schematic download
-            schematicDownloadButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const fileName = e.target.dataset.file;
-                    // Replace alert with a custom message box for production environments if needed
-                    alert(`Simulating download of ${fileName}. In a real app, this would trigger a file download.`);
-                    console.log(`Simulated download: ${fileName}`);
-                    // In a real app, you might use:
-                    // const a = document.createElement('a');
-                    // a.href = 'path/to/your/files/' + fileName;
-                    // a.download = fileName;
-                    // document.body.appendChild(a);
-                    // a.click();
-                    // document.body.removeChild(a);
-                });
-            });
-
             // Simulate code download
-            codeDownloadButtons.forEach(button => {
+            libraryDownloadButtons.forEach(button => {
                 button.addEventListener('click', (e) => {
                     const fileName = e.target.dataset.file;
                     const a = document.createElement('a');
